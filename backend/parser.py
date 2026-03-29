@@ -122,8 +122,9 @@ def summarize_dataframe(df: pd.DataFrame) -> str:
     - Row/column counts
     - Column names and types
     - Key statistics for numeric columns
+    - Categorical breakdowns
     - Sample rows (first 5)
-    - Notable patterns
+    - Notable patterns and correlations
     """
     lines = []
 
@@ -149,8 +150,24 @@ def summarize_dataframe(df: pd.DataFrame) -> str:
             stats = df[col].describe()
             lines.append(
                 f"- {col}: min={stats['min']:,.2f} | max={stats['max']:,.2f} | "
-                f"mean={stats['mean']:,.2f} | sum={df[col].sum():,.2f}"
+                f"mean={stats['mean']:,.2f} | median={stats['50%']:,.2f} | "
+                f"sum={df[col].sum():,.2f}"
             )
+        lines.append("")
+
+    # Categorical breakdowns — group by text columns and aggregate numeric
+    text_cols = df.select_dtypes(include=["object", "string"]).columns.tolist()
+    if text_cols and numeric_cols:
+        lines.append("Breakdowns:")
+        for text_col in text_cols[:3]:  # Limit to first 3 text columns
+            if df[text_col].nunique() <= 20:  # Only if manageable cardinality
+                for num_col in numeric_cols[:2]:  # First 2 numeric cols
+                    grouped = df.groupby(text_col)[num_col].sum().sort_values(ascending=False)
+                    total = grouped.sum()
+                    lines.append(f"- {num_col} by {text_col}:")
+                    for cat, val in grouped.items():
+                        pct = (val / total * 100) if total > 0 else 0
+                        lines.append(f"    {cat}: {val:,.2f} ({pct:.1f}%)")
         lines.append("")
 
     # Sample rows
@@ -161,21 +178,46 @@ def summarize_dataframe(df: pd.DataFrame) -> str:
     lines.append("")
 
     # Notable patterns
-    lines.append("Notable patterns:")
+    patterns_found = []
     for col in numeric_cols:
         if len(df) >= 3:
             last_3 = df[col].tail(3).tolist()
             if all(last_3[i] > last_3[i + 1] for i in range(len(last_3) - 1)):
-                lines.append(f"- {col} shows declining trend in last 3 rows")
+                patterns_found.append(f"- {col} shows declining trend in last 3 rows")
             elif all(last_3[i] < last_3[i + 1] for i in range(len(last_3) - 1)):
-                lines.append(f"- {col} shows increasing trend in last 3 rows")
+                patterns_found.append(f"- {col} shows increasing trend in last 3 rows")
 
-    # Concentration analysis for numeric cols
+    # Concentration analysis
     for col in numeric_cols:
         total = df[col].sum()
         if total > 0:
             max_val = df[col].max()
-            if max_val / total > 0.5:
-                lines.append(f"- {col}: highest value represents {max_val / total:.0%} of total")
+            if max_val / total > 0.3:
+                patterns_found.append(
+                    f"- {col}: single highest value represents {max_val / total:.0%} of total"
+                )
+
+    # Variance/spread analysis
+    for col in numeric_cols:
+        if len(df) >= 3:
+            cv = df[col].std() / df[col].mean() if df[col].mean() != 0 else 0
+            if cv > 0.5:
+                patterns_found.append(
+                    f"- {col}: high variability (coefficient of variation: {cv:.2f})"
+                )
+
+    if patterns_found:
+        lines.append("Notable patterns:")
+        lines.extend(patterns_found)
+    else:
+        lines.append("Notable patterns: None detected")
 
     return "\n".join(lines)
+
+
+def prepare_data_for_ai(df: pd.DataFrame) -> tuple[pd.DataFrame, str]:
+    """Full pipeline: strip PII, then summarize. Returns cleaned df and summary."""
+    cleaned = strip_pii_columns(df)
+    cleaned = strip_pii_values(cleaned)
+    summary = summarize_dataframe(cleaned)
+    return cleaned, summary
