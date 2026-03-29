@@ -1,5 +1,6 @@
 import { useState, useCallback } from 'react';
 import DataInput from './components/DataInput';
+import NarrativeView from './components/NarrativeView';
 import type { WhyBoardAnalysis } from './types';
 import { analyzeCsv, analyzePaste } from './api/whyboard';
 
@@ -7,6 +8,11 @@ function App() {
   const [analysis, setAnalysis] = useState<WhyBoardAnalysis | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  const handleReset = useCallback(() => {
+    setAnalysis(null);
+    setError(null);
+  }, []);
 
   const handleAnalyzeCsv = useCallback(async (file: File, context?: string) => {
     setIsLoading(true);
@@ -50,7 +56,8 @@ function App() {
       </header>
 
       <main className="flex-1 px-6 py-12">
-        {!analysis && !isLoading && (
+        {/* Data input — shown when no analysis and not loading */}
+        {!analysis && !isLoading && !error && (
           <DataInput
             onAnalyzeCsv={handleAnalyzeCsv}
             onAnalyzePaste={handleAnalyzePaste}
@@ -58,17 +65,26 @@ function App() {
           />
         )}
 
-        {/* Loading skeleton */}
+        {/* Loading skeleton — never a spinner */}
         {isLoading && (
           <div className="max-w-2xl mx-auto space-y-4 animate-pulse">
-            <div className="h-6 bg-gray-800 rounded w-3/4" />
-            <div className="h-6 bg-gray-800 rounded w-full" />
-            <div className="h-6 bg-gray-800 rounded w-5/6" />
-            <div className="h-4 bg-gray-800 rounded w-1/2 mt-8" />
-            <div className="grid grid-cols-3 gap-4 mt-6">
-              <div className="h-24 bg-gray-800 rounded" />
-              <div className="h-24 bg-gray-800 rounded" />
-              <div className="h-24 bg-gray-800 rounded" />
+            <div className="flex items-center justify-between mb-6">
+              <div className="h-10 bg-gray-800 rounded-full w-52" />
+              <div className="h-10 bg-gray-800 rounded w-20" />
+            </div>
+            <div className="bg-gray-900 border border-gray-800 rounded-lg p-8 space-y-3">
+              <div className="h-5 bg-gray-800 rounded w-full" />
+              <div className="h-5 bg-gray-800 rounded w-11/12" />
+              <div className="h-5 bg-gray-800 rounded w-4/5" />
+            </div>
+            <div className="grid grid-cols-3 gap-4">
+              <div className="h-24 bg-gray-900 border border-gray-800 rounded-lg" />
+              <div className="h-24 bg-gray-900 border border-gray-800 rounded-lg" />
+              <div className="h-24 bg-gray-900 border border-gray-800 rounded-lg" />
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div className="h-20 bg-gray-900 border border-gray-800 rounded-lg" />
+              <div className="h-20 bg-gray-900 border border-gray-800 rounded-lg" />
             </div>
           </div>
         )}
@@ -79,7 +95,7 @@ function App() {
             <div className="bg-red-900/20 border border-red-800 rounded-lg p-6 text-center">
               <p className="text-red-400">{error}</p>
               <button
-                onClick={() => { setError(null); setAnalysis(null); }}
+                onClick={handleReset}
                 className="mt-4 text-sm text-gray-400 hover:text-gray-200 underline"
               >
                 Try again
@@ -88,24 +104,9 @@ function App() {
           </div>
         )}
 
-        {/* Analysis result placeholder — Sprint 4 will add NarrativeView */}
+        {/* Narrative output — the hero feature */}
         {analysis && (
-          <div className="max-w-2xl mx-auto">
-            <div className="bg-gray-900 border border-gray-700 rounded-lg p-6">
-              <p className="font-narrative text-lg text-gray-200 leading-relaxed">
-                {analysis.executive_narrative}
-              </p>
-              <p className="text-sm text-gray-500 mt-4">
-                Full narrative UI coming in Sprint 4. Toggle, signals, and copy.
-              </p>
-            </div>
-            <button
-              onClick={() => { setAnalysis(null); setError(null); }}
-              className="mt-6 text-sm text-gray-400 hover:text-gray-200 underline"
-            >
-              Analyze another dataset
-            </button>
-          </div>
+          <NarrativeView analysis={analysis} onReset={handleReset} />
         )}
       </main>
 
