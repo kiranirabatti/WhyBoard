@@ -1,0 +1,12 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(mv ai-layer.md .claude/rules/ai-layer.md)",
+      "Bash(mv frontend.md .claude/rules/frontend.md)",
+      "Bash(mv data-handling.md .claude/rules/data-handling.md)",
+      "Bash(mv powerbi-auth.md .claude/rules/powerbi-auth.md)",
+      "Bash(mv architecture.md docs/architecture.md)",
+      "Bash(pip install:*)"
+    ]
+  }
+}
