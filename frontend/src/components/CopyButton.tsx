@@ -32,7 +32,7 @@ function CopyButton({ text }: CopyButtonProps) {
       className={`inline-flex items-center gap-1.5 px-4 py-2 rounded-xl text-sm font-medium transition-all duration-300 ${
         copied
           ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20'
-          : 'bg-surface-1 text-gray-400 hover:text-gray-200 border border-surface-3/50 hover:border-surface-3'
+          : 'bg-surface-base text-gray-400 hover:text-gray-200 border border-surface-border/50 hover:border-surface-border'
       }`}
     >
       {copied ? (

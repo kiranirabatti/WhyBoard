@@ -60,7 +60,7 @@ function ExportButton({ analysis }: ExportButtonProps) {
   return (
     <button
       onClick={handleExport}
-      className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl text-sm font-medium bg-surface-1 text-gray-400 hover:text-gray-200 border border-surface-3/50 hover:border-surface-3 transition-all"
+      className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl text-sm font-medium bg-surface-base text-gray-400 hover:text-gray-200 border border-surface-border/50 hover:border-surface-border transition-all"
       title="Download as text file"
     >
       <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">

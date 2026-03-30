@@ -93,7 +93,7 @@ function App() {
   return (
     <div className="min-h-screen flex flex-col">
       {/* Header */}
-      <header className="sticky top-0 z-50 bg-surface-0/80 backdrop-blur-xl border-b border-surface-3/30">
+      <header className="sticky top-0 z-50 bg-surface-deep/80 backdrop-blur-xl border-b border-surface-border/30">
         <div className="max-w-5xl mx-auto px-6 py-4 flex items-center justify-between">
           <button onClick={handleReset} className="flex items-center gap-3 group">
             <div className="w-9 h-9 rounded-xl bg-brand-500/10 border border-brand-500/20 flex items-center justify-center group-hover:bg-brand-500/20 transition-colors">
@@ -238,7 +238,7 @@ function App() {
 
       {/* Footer — only on welcome */}
       {state === 'welcome' && (
-        <footer className="border-t border-surface-3/30 px-6 py-5">
+        <footer className="border-t border-surface-border/30 px-6 py-5">
           <div className="max-w-5xl mx-auto flex items-center justify-between text-xs text-gray-600">
             <span>ScriptsHub Internal</span>
             <span>Data is processed in memory and never stored</span>

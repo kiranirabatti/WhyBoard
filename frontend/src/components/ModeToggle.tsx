@@ -7,7 +7,7 @@ interface ModeToggleProps {
 
 function ModeToggle({ mode, onToggle }: ModeToggleProps) {
   return (
-    <div className="inline-flex items-center bg-surface-1 border border-surface-3/50 rounded-xl p-1">
+    <div className="inline-flex items-center bg-surface-base border border-surface-border/50 rounded-xl p-1">
       <button
         onClick={() => onToggle('executive')}
         className={`px-5 py-2 rounded-lg text-sm font-medium transition-all duration-300 ${

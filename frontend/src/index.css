@@ -4,14 +4,13 @@
 
 @layer base {
   body {
-    @apply bg-surface-0 text-gray-100 font-sans;
+    @apply bg-surface-deep text-gray-100 font-sans;
   }
 
   ::selection {
     @apply bg-brand-500/30 text-white;
   }
 
-  /* Scrollbar */
   ::-webkit-scrollbar {
     width: 6px;
   }
@@ -19,7 +18,7 @@
     @apply bg-transparent;
   }
   ::-webkit-scrollbar-thumb {
-    @apply bg-surface-3 rounded-full;
+    @apply bg-surface-border rounded-full;
   }
   ::-webkit-scrollbar-thumb:hover {
     @apply bg-gray-500;
@@ -32,21 +31,21 @@
            text-white font-medium py-3 px-6 rounded-xl
            transition-all duration-200
            shadow-lg shadow-brand-500/20 hover:shadow-brand-500/30
-           disabled:bg-surface-3 disabled:text-gray-600 disabled:shadow-none disabled:cursor-not-allowed;
+           disabled:bg-surface-border disabled:text-gray-600 disabled:shadow-none disabled:cursor-not-allowed;
   }
 
   .btn-secondary {
-    @apply bg-surface-2 hover:bg-surface-3 text-gray-300 hover:text-white
-           font-medium py-2.5 px-5 rounded-xl border border-surface-3
+    @apply bg-surface-raised hover:bg-surface-border text-gray-300 hover:text-white
+           font-medium py-2.5 px-5 rounded-xl border border-surface-border
            transition-all duration-200;
   }
 
   .card {
-    @apply bg-surface-1 border border-surface-3/50 rounded-2xl;
+    @apply bg-surface-base border border-surface-border/50 rounded-2xl;
   }
 
   .card-elevated {
-    @apply bg-surface-1 border border-surface-3/50 rounded-2xl
+    @apply bg-surface-base border border-surface-border/50 rounded-2xl
            shadow-xl shadow-black/20;
   }
 }
@@ -63,11 +62,31 @@
   .shimmer-bg {
     background: linear-gradient(
       90deg,
-      theme('colors.surface.2') 0%,
-      theme('colors.surface.3') 50%,
-      theme('colors.surface.2') 100%
+      #1e293b 0%,
+      #334155 50%,
+      #1e293b 100%
     );
     background-size: 200% 100%;
     animation: shimmer 2s infinite;
   }
+}
+
+@keyframes fade-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes fade-up {
+  from { opacity: 0; transform: translateY(12px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes scale-in {
+  from { opacity: 0; transform: scale(0.95); }
+  to { opacity: 1; transform: scale(1); }
+}
+
+@keyframes shimmer {
+  0% { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
 }

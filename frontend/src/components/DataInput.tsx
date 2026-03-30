@@ -80,7 +80,7 @@ function DataInput({ onAnalyzeCsv, onAnalyzePaste, isLoading }: DataInputProps) 
 
       {/* Tabs */}
       <div className="card-elevated overflow-hidden">
-        <div className="flex border-b border-surface-3/50">
+        <div className="flex border-b border-surface-border/50">
           <button
             onClick={() => setActiveTab('upload')}
             className={`flex-1 px-6 py-3.5 text-sm font-medium transition-all relative ${
@@ -122,7 +122,7 @@ function DataInput({ onAnalyzeCsv, onAnalyzePaste, isLoading }: DataInputProps) 
                   ? 'border-brand-400 bg-brand-400/5 scale-[1.01]'
                   : selectedFile
                     ? 'border-emerald-500/50 bg-emerald-500/5'
-                    : 'border-surface-3 hover:border-gray-500 hover:bg-surface-2/50'
+                    : 'border-surface-border hover:border-gray-500 hover:bg-surface-raised/50'
               }`}
             >
               <input
@@ -146,7 +146,7 @@ function DataInput({ onAnalyzeCsv, onAnalyzePaste, isLoading }: DataInputProps) 
                 </div>
               ) : (
                 <div className="space-y-3">
-                  <div className="w-12 h-12 rounded-xl bg-surface-2 border border-surface-3 flex items-center justify-center mx-auto">
+                  <div className="w-12 h-12 rounded-xl bg-surface-raised border border-surface-border flex items-center justify-center mx-auto">
                     <svg className="w-6 h-6 text-gray-500" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
                       <path strokeLinecap="round" strokeLinejoin="round" d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5m-13.5-9L12 3m0 0l4.5 4.5M12 3v13.5" />
                     </svg>
@@ -166,7 +166,7 @@ function DataInput({ onAnalyzeCsv, onAnalyzePaste, isLoading }: DataInputProps) 
               value={pasteData}
               onChange={(e) => setPasteData(e.target.value)}
               placeholder={PASTE_PLACEHOLDER}
-              className="w-full h-52 bg-surface-0 border border-surface-3 rounded-xl p-4 font-mono text-sm text-gray-200 placeholder-gray-700 resize-none focus:outline-none focus:border-brand-500/50 focus:ring-1 focus:ring-brand-500/20 transition-all"
+              className="w-full h-52 bg-surface-deep border border-surface-border rounded-xl p-4 font-mono text-sm text-gray-200 placeholder-gray-700 resize-none focus:outline-none focus:border-brand-500/50 focus:ring-1 focus:ring-brand-500/20 transition-all"
             />
           )}
 
@@ -177,7 +177,7 @@ function DataInput({ onAnalyzeCsv, onAnalyzePaste, isLoading }: DataInputProps) 
               value={context}
               onChange={(e) => setContext(e.target.value)}
               placeholder="Add context: 'Board meeting prep', 'Focus on margins'..."
-              className="w-full bg-surface-0 border border-surface-3 rounded-xl px-4 py-3 text-sm text-gray-200 placeholder-gray-600 focus:outline-none focus:border-brand-500/50 focus:ring-1 focus:ring-brand-500/20 transition-all"
+              className="w-full bg-surface-deep border border-surface-border rounded-xl px-4 py-3 text-sm text-gray-200 placeholder-gray-600 focus:outline-none focus:border-brand-500/50 focus:ring-1 focus:ring-brand-500/20 transition-all"
             />
             <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-gray-700">Optional</span>
           </div>

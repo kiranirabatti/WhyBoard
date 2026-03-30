@@ -59,7 +59,7 @@ function MetadataBar({ metadata }: MetadataBarProps) {
       </div>
 
       {/* Quality progress bar */}
-      <div className="w-full bg-surface-2 rounded-full h-1">
+      <div className="w-full bg-surface-raised rounded-full h-1">
         <div
           className={`h-1 rounded-full transition-all duration-700 ease-out ${getQualityBarColor(metadata.data_quality_score)}`}
           style={{ width: `${metadata.data_quality_score}%` }}

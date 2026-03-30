@@ -20,10 +20,10 @@ export default {
           700: '#1d4ed8',
         },
         surface: {
-          0: '#030712',    // deepest bg
-          1: '#0f172a',    // card bg
-          2: '#1e293b',    // elevated
-          3: '#334155',    // borders
+          deep: '#030712',
+          base: '#0f172a',
+          raised: '#1e293b',
+          border: '#334155',
         },
         signal: {
           up: '#34d399',
