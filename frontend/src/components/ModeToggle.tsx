@@ -7,23 +7,23 @@ interface ModeToggleProps {
 
 function ModeToggle({ mode, onToggle }: ModeToggleProps) {
   return (
-    <div className="inline-flex items-center bg-gray-800 rounded-full p-1">
+    <div className="inline-flex items-center bg-surface-1 border border-surface-3/50 rounded-xl p-1">
       <button
         onClick={() => onToggle('executive')}
-        className={`px-5 py-2 rounded-full text-sm font-medium transition-all duration-300 ${
+        className={`px-5 py-2 rounded-lg text-sm font-medium transition-all duration-300 ${
           mode === 'executive'
-            ? 'bg-blue-500 text-white shadow-lg'
-            : 'text-gray-400 hover:text-gray-200'
+            ? 'bg-brand-500 text-white shadow-lg shadow-brand-500/25'
+            : 'text-gray-500 hover:text-gray-300'
         }`}
       >
         Executive
       </button>
       <button
         onClick={() => onToggle('analyst')}
-        className={`px-5 py-2 rounded-full text-sm font-medium transition-all duration-300 ${
+        className={`px-5 py-2 rounded-lg text-sm font-medium transition-all duration-300 ${
           mode === 'analyst'
-            ? 'bg-blue-500 text-white shadow-lg'
-            : 'text-gray-400 hover:text-gray-200'
+            ? 'bg-brand-500 text-white shadow-lg shadow-brand-500/25'
+            : 'text-gray-500 hover:text-gray-300'
         }`}
       >
         Analyst
