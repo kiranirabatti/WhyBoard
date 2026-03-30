@@ -8,16 +8,28 @@ Always uses claude-sonnet-4-6. Never hardcodes another model.
 import json
 import logging
 import re
+import time
 from datetime import datetime, timezone
 
 import anthropic
 
 from backend.config import settings
-from backend.schema import AnalyzeResponse, KeySignal, WhyBoardAnalysis
+from backend.schema import (
+    AnalysisMetadata,
+    AnalyzeResponse,
+    KeySignal,
+    TokenUsage,
+    WhyBoardAnalysis,
+)
 
 logger = logging.getLogger(__name__)
 
 MODEL = "claude-sonnet-4-6"
+
+# Claude Sonnet 4 pricing (per token)
+PRICE_INPUT_PER_MTOK_USD = 3.00   # $3.00 per million input tokens
+PRICE_OUTPUT_PER_MTOK_USD = 15.00  # $15.00 per million output tokens
+USD_TO_INR = 83.50  # Approximate exchange rate
 
 SYSTEM_PROMPT = """You are a senior business analyst. Given structured data, output ONLY valid JSON.
 
@@ -61,7 +73,6 @@ def _build_user_prompt(data_summary: str, context: str | None = None) -> str:
 def _strip_markdown_fences(text: str) -> str:
     """Remove markdown code fences if Claude wraps the JSON response."""
     text = text.strip()
-    # Remove ```json ... ``` or ``` ... ```
     text = re.sub(r"^```(?:json)?\s*\n?", "", text)
     text = re.sub(r"\n?```\s*$", "", text)
     return text.strip()
@@ -74,23 +85,103 @@ def _parse_ai_response(raw_text: str) -> dict:
     try:
         return json.loads(cleaned)
     except json.JSONDecodeError:
-        # Try to extract JSON from mixed text
         match = re.search(r"\{[\s\S]*\}", cleaned)
         if match:
             return json.loads(match.group())
         raise
 
 
+def _calculate_cost(input_tokens: int, output_tokens: int) -> TokenUsage:
+    """Calculate token usage and cost in USD and INR."""
+    cost_usd = (
+        (input_tokens / 1_000_000) * PRICE_INPUT_PER_MTOK_USD
+        + (output_tokens / 1_000_000) * PRICE_OUTPUT_PER_MTOK_USD
+    )
+    cost_inr = cost_usd * USD_TO_INR
+
+    return TokenUsage(
+        input_tokens=input_tokens,
+        output_tokens=output_tokens,
+        total_tokens=input_tokens + output_tokens,
+        cost_usd=round(cost_usd, 6),
+        cost_inr=round(cost_inr, 4),
+    )
+
+
+def _calculate_data_quality_score(
+    row_count: int,
+    column_count: int,
+    summary: str,
+) -> int:
+    """Score data quality 0-100 based on size, completeness, and variety.
+
+    Factors:
+    - Row count (more rows = better signal, up to a point)
+    - Column count (more dimensions = richer analysis)
+    - Presence of numeric stats (means data has analyzable numbers)
+    - Presence of breakdowns (means categorical variety exists)
+    """
+    score = 0
+
+    # Row count: 0-30 points
+    if row_count >= 100:
+        score += 30
+    elif row_count >= 20:
+        score += 25
+    elif row_count >= 10:
+        score += 20
+    elif row_count >= 5:
+        score += 15
+    else:
+        score += 5
+
+    # Column count: 0-25 points
+    if column_count >= 6:
+        score += 25
+    elif column_count >= 4:
+        score += 20
+    elif column_count >= 3:
+        score += 15
+    else:
+        score += 10
+
+    # Has numeric statistics: 0-25 points
+    if "Column Statistics:" in summary:
+        score += 25
+    elif "min=" in summary:
+        score += 15
+
+    # Has categorical breakdowns: 0-20 points
+    if "Breakdowns:" in summary:
+        score += 20
+    elif "Notable patterns:" in summary and "None detected" not in summary:
+        score += 10
+
+    return min(score, 100)
+
+
 def _validate_and_build_analysis(
     data: dict,
     row_count: int,
     column_count: int,
+    response_time: float,
+    token_usage: TokenUsage,
+    data_quality_score: int,
 ) -> WhyBoardAnalysis:
     """Validate parsed JSON against schema and inject backend metadata."""
-    # Validate key_signals has exactly 3
     signals = data.get("key_signals", [])
     if len(signals) != 3:
         raise ValueError(f"Expected 3 key_signals, got {len(signals)}")
+
+    metadata = AnalysisMetadata(
+        data_type=data.get("data_type", "unknown"),
+        row_count=row_count,
+        column_count=column_count,
+        analyzed_at=datetime.now(timezone.utc).isoformat(),
+        response_time_seconds=round(response_time, 2),
+        token_usage=token_usage,
+        data_quality_score=data_quality_score,
+    )
 
     return WhyBoardAnalysis(
         executive_narrative=data["executive_narrative"],
@@ -102,11 +193,7 @@ def _validate_and_build_analysis(
         ),
         risk_flag=data["risk_flag"],
         opportunity_flag=data["opportunity_flag"],
-        data_type=data.get("data_type", "unknown"),
-        # Backend-injected metadata — not from Claude
-        row_count=row_count,
-        column_count=column_count,
-        analyzed_at=datetime.now(timezone.utc).isoformat(),
+        metadata=metadata,
     )
 
 
@@ -120,6 +207,8 @@ async def analyze_data(
 
     This is the main entry point for the AI layer.
     """
+    start_time = time.monotonic()
+
     try:
         client = anthropic.AsyncAnthropic(api_key=settings.ANTHROPIC_API_KEY)
 
@@ -135,14 +224,28 @@ async def analyze_data(
             ],
         )
 
+        response_time = time.monotonic() - start_time
         raw_text = message.content[0].text
-        logger.info(
-            "Claude response received",
-            extra={"model": MODEL, "tokens_used": message.usage.input_tokens + message.usage.output_tokens},
+
+        token_usage = _calculate_cost(
+            message.usage.input_tokens,
+            message.usage.output_tokens,
         )
 
+        logger.info(
+            "Claude response received in %.2fs — %d tokens ($%.4f / ₹%.4f)",
+            response_time,
+            token_usage.total_tokens,
+            token_usage.cost_usd,
+            token_usage.cost_inr,
+        )
+
+        data_quality = _calculate_data_quality_score(row_count, column_count, data_summary)
         parsed = _parse_ai_response(raw_text)
-        analysis = _validate_and_build_analysis(parsed, row_count, column_count)
+        analysis = _validate_and_build_analysis(
+            parsed, row_count, column_count,
+            response_time, token_usage, data_quality,
+        )
 
         return AnalyzeResponse(success=True, analysis=analysis)
 

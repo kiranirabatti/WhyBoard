@@ -3,6 +3,8 @@ import type { WhyBoardAnalysis, NarrativeMode } from '../types';
 import ModeToggle from './ModeToggle';
 import CopyButton from './CopyButton';
 import SignalCards from './SignalCards';
+import MetadataBar from './MetadataBar';
+import ExportButton from './ExportButton';
 
 interface NarrativeViewProps {
   analysis: WhyBoardAnalysis;
@@ -18,10 +20,13 @@ function NarrativeView({ analysis, onReset }: NarrativeViewProps) {
 
   return (
     <div className="max-w-2xl mx-auto space-y-6">
-      {/* Toggle + Copy row */}
+      {/* Toggle + Actions row */}
       <div className="flex items-center justify-between">
         <ModeToggle mode={mode} onToggle={setMode} />
-        <CopyButton text={activeNarrative} />
+        <div className="flex items-center gap-2">
+          <CopyButton text={activeNarrative} />
+          <ExportButton analysis={analysis} />
+        </div>
       </div>
 
       {/* Narrative — the hero output */}
@@ -49,14 +54,14 @@ function NarrativeView({ analysis, onReset }: NarrativeViewProps) {
         </div>
       </div>
 
-      {/* Metadata footer */}
-      <div className="flex items-center justify-between text-xs text-gray-600 pt-2">
-        <span>
-          {analysis.data_type} &middot; {analysis.row_count.toLocaleString()} rows &middot; {analysis.column_count} columns
-        </span>
+      {/* Metadata Bar — tokens, cost, timing, quality */}
+      <MetadataBar metadata={analysis.metadata} />
+
+      {/* Reset button */}
+      <div className="text-center pt-2">
         <button
           onClick={onReset}
-          className="text-gray-500 hover:text-gray-300 underline"
+          className="text-sm text-gray-500 hover:text-gray-300 underline"
         >
           Analyze another dataset
         </button>

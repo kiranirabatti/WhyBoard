@@ -1,31 +1,12 @@
 """Tests for API endpoints — /api/analyze/csv and /api/analyze/paste."""
 
-import json
 from unittest.mock import AsyncMock, patch
 
 import pytest
 from httpx import ASGITransport, AsyncClient
 
 from backend.main import app
-from backend.schema import AnalyzeResponse, KeySignal, WhyBoardAnalysis
-
-MOCK_ANALYSIS = WhyBoardAnalysis(
-    executive_narrative="Test narrative for executives.",
-    analyst_narrative="Test narrative with 23% growth in Q1 revenue.",
-    key_signals=(
-        KeySignal(label="Revenue Growth", value="23%", direction="up"),
-        KeySignal(label="Cost Ratio", value="45%", direction="flat"),
-        KeySignal(label="Margin Trend", value="-3%", direction="down"),
-    ),
-    risk_flag="Concentration risk in North region.",
-    opportunity_flag="Services line growing fast — expand capacity.",
-    data_type="sales",
-    row_count=36,
-    column_count=6,
-    analyzed_at="2026-03-29T10:00:00+00:00",
-)
-
-MOCK_RESPONSE = AnalyzeResponse(success=True, analysis=MOCK_ANALYSIS)
+from backend.tests.fixtures import MOCK_RESPONSE
 
 
 @pytest.fixture
@@ -62,6 +43,8 @@ async def test_analyze_csv_success(transport):
     data = response.json()
     assert data["success"] is True
     assert data["analysis"]["executive_narrative"] == "Test narrative for executives."
+    assert data["analysis"]["metadata"]["token_usage"]["total_tokens"] == 1200
+    assert data["analysis"]["metadata"]["token_usage"]["cost_inr"] > 0
 
 
 @pytest.mark.asyncio
@@ -116,6 +99,7 @@ async def test_analyze_paste_success(transport):
     data = response.json()
     assert data["success"] is True
     assert len(data["analysis"]["key_signals"]) == 3
+    assert data["analysis"]["metadata"]["response_time_seconds"] > 0
 
 
 @pytest.mark.asyncio
@@ -141,7 +125,6 @@ async def test_analyze_paste_with_context(transport):
             )
 
     assert response.status_code == 200
-    # Verify context was passed through
     mock_ai.assert_called_once()
     assert mock_ai.call_args.kwargs["context"] == "Focus on regional trends"
 

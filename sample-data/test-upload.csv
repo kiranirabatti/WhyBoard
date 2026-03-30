@@ -1,0 +1,13 @@
+Month,Department,Headcount,Attrition,New_Hires,Avg_Tenure_Months,Engagement_Score
+Jan,Engineering,142,8,12,28.5,4.2
+Jan,Sales,89,5,7,18.3,3.8
+Jan,Marketing,34,2,3,22.1,4.1
+Jan,Operations,67,3,4,31.7,3.9
+Feb,Engineering,146,6,10,29.1,4.1
+Feb,Sales,91,7,9,17.8,3.6
+Feb,Marketing,35,1,2,22.8,4.3
+Feb,Operations,68,4,5,31.2,3.7
+Mar,Engineering,150,4,8,29.8,4.3
+Mar,Sales,93,9,11,16.9,3.4
+Mar,Marketing,36,1,2,23.5,4.4
+Mar,Operations,69,6,7,30.5,3.5

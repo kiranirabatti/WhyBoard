@@ -7,11 +7,14 @@ import pytest
 
 from backend.intelligence import (
     _build_user_prompt,
+    _calculate_cost,
+    _calculate_data_quality_score,
     _parse_ai_response,
     _strip_markdown_fences,
     _validate_and_build_analysis,
     analyze_data,
 )
+from backend.schema import TokenUsage
 
 
 # ── Markdown fence stripping ──────────────────────────────
@@ -74,6 +77,49 @@ class TestBuildUserPrompt:
         assert "focus on revenue trends" in prompt
 
 
+# ── Cost calculation ──────────────────────────────────────
+
+
+class TestCalculateCost:
+    def test_basic_cost(self):
+        usage = _calculate_cost(1000, 500)
+        assert usage.input_tokens == 1000
+        assert usage.output_tokens == 500
+        assert usage.total_tokens == 1500
+        assert usage.cost_usd > 0
+        assert usage.cost_inr > usage.cost_usd  # INR > USD
+
+    def test_zero_tokens(self):
+        usage = _calculate_cost(0, 0)
+        assert usage.cost_usd == 0
+        assert usage.cost_inr == 0
+
+    def test_inr_conversion(self):
+        usage = _calculate_cost(1_000_000, 0)  # 1M input tokens = $3.00
+        assert abs(usage.cost_usd - 3.0) < 0.01
+        assert usage.cost_inr > 200  # at ~83.5 rate
+
+
+# ── Data quality score ────────────────────────────────────
+
+
+class TestDataQualityScore:
+    def test_high_quality(self):
+        summary = "Column Statistics:\nmin=...\nBreakdowns:\nNotable patterns:\n- trend"
+        score = _calculate_data_quality_score(100, 8, summary)
+        assert score >= 80
+
+    def test_low_quality(self):
+        summary = "Notable patterns: None detected"
+        score = _calculate_data_quality_score(3, 2, summary)
+        assert score < 50
+
+    def test_medium_quality(self):
+        summary = "Column Statistics:\nmin=...\nNotable patterns:\n- some trend"
+        score = _calculate_data_quality_score(15, 4, summary)
+        assert 50 <= score <= 85
+
+
 # ── Schema validation ─────────────────────────────────────
 
 
@@ -90,32 +136,56 @@ VALID_AI_RESPONSE = {
     "data_type": "sales",
 }
 
+MOCK_TOKEN_USAGE = TokenUsage(
+    input_tokens=800, output_tokens=400, total_tokens=1200,
+    cost_usd=0.0084, cost_inr=0.7014,
+)
+
 
 class TestValidateAndBuildAnalysis:
     def test_valid_response(self):
-        analysis = _validate_and_build_analysis(VALID_AI_RESPONSE, row_count=36, column_count=6)
+        analysis = _validate_and_build_analysis(
+            VALID_AI_RESPONSE, row_count=36, column_count=6,
+            response_time=3.5, token_usage=MOCK_TOKEN_USAGE,
+            data_quality_score=85,
+        )
         assert analysis.executive_narrative == "Revenue growth masks a concentration risk."
-        assert analysis.row_count == 36
-        assert analysis.column_count == 6
-        assert analysis.data_type == "sales"
-        assert analysis.analyzed_at  # not empty
+        assert analysis.metadata.row_count == 36
+        assert analysis.metadata.column_count == 6
+        assert analysis.metadata.data_type == "sales"
+        assert analysis.metadata.response_time_seconds == 3.5
+        assert analysis.metadata.token_usage.total_tokens == 1200
+        assert analysis.metadata.token_usage.cost_inr > 0
+        assert analysis.metadata.data_quality_score == 85
         assert len(analysis.key_signals) == 3
 
     def test_wrong_signal_count_raises(self):
         bad = {**VALID_AI_RESPONSE, "key_signals": [VALID_AI_RESPONSE["key_signals"][0]]}
         with pytest.raises(ValueError, match="Expected 3"):
-            _validate_and_build_analysis(bad, row_count=10, column_count=3)
+            _validate_and_build_analysis(
+                bad, row_count=10, column_count=3,
+                response_time=1.0, token_usage=MOCK_TOKEN_USAGE,
+                data_quality_score=50,
+            )
 
     def test_missing_field_raises(self):
         bad = {k: v for k, v in VALID_AI_RESPONSE.items() if k != "executive_narrative"}
         with pytest.raises(KeyError):
-            _validate_and_build_analysis(bad, row_count=10, column_count=3)
+            _validate_and_build_analysis(
+                bad, row_count=10, column_count=3,
+                response_time=1.0, token_usage=MOCK_TOKEN_USAGE,
+                data_quality_score=50,
+            )
 
     def test_metadata_injected_by_backend(self):
-        analysis = _validate_and_build_analysis(VALID_AI_RESPONSE, row_count=100, column_count=8)
-        assert analysis.row_count == 100
-        assert analysis.column_count == 8
-        assert "T" in analysis.analyzed_at  # ISO format check
+        analysis = _validate_and_build_analysis(
+            VALID_AI_RESPONSE, row_count=100, column_count=8,
+            response_time=5.2, token_usage=MOCK_TOKEN_USAGE,
+            data_quality_score=90,
+        )
+        assert analysis.metadata.row_count == 100
+        assert analysis.metadata.column_count == 8
+        assert "T" in analysis.metadata.analyzed_at
 
 
 # ── Full analyze_data flow (mocked Claude) ─────────────────
@@ -141,6 +211,10 @@ class TestAnalyzeData:
         assert result.success is True
         assert result.analysis is not None
         assert result.analysis.executive_narrative == VALID_AI_RESPONSE["executive_narrative"]
+        assert result.analysis.metadata.token_usage.input_tokens == 500
+        assert result.analysis.metadata.token_usage.output_tokens == 300
+        assert result.analysis.metadata.token_usage.cost_inr > 0
+        assert result.analysis.metadata.response_time_seconds >= 0
         assert result.error is None
 
     @pytest.mark.asyncio
@@ -164,7 +238,7 @@ class TestAnalyzeData:
 
     @pytest.mark.asyncio
     async def test_missing_fields_response(self):
-        incomplete = {"executive_narrative": "test"}  # missing all other fields
+        incomplete = {"executive_narrative": "test"}
         mock_message = MagicMock()
         mock_message.content = [MagicMock(text=json.dumps(incomplete))]
         mock_message.usage = MagicMock(input_tokens=100, output_tokens=50)
@@ -184,22 +258,18 @@ class TestAnalyzeData:
 
     @pytest.mark.asyncio
     async def test_api_error_handled(self):
+        import anthropic as anth
+
         mock_client = AsyncMock()
         mock_client.messages.create = AsyncMock(
-            side_effect=Exception("API Error")
+            side_effect=anth.APIStatusError(
+                message="rate limited",
+                response=MagicMock(status_code=429),
+                body={"error": {"message": "rate limited"}},
+            )
         )
 
         with patch("backend.intelligence.anthropic.AsyncAnthropic", return_value=mock_client):
-            # The generic Exception won't be caught by our specific handlers,
-            # but let's test the anthropic.APIError path
-            import anthropic as anth
-            mock_client.messages.create = AsyncMock(
-                side_effect=anth.APIStatusError(
-                    message="rate limited",
-                    response=MagicMock(status_code=429),
-                    body={"error": {"message": "rate limited"}},
-                )
-            )
             result = await analyze_data(
                 data_summary="test summary",
                 row_count=10,
@@ -226,7 +296,6 @@ class TestAnalyzeData:
                 context="Focus on revenue trends",
             )
 
-        # Verify the message sent to Claude includes context
         call_kwargs = mock_client.messages.create.call_args.kwargs
         user_message = call_kwargs["messages"][0]["content"]
         assert "Focus on revenue trends" in user_message
