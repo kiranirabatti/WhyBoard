@@ -300,7 +300,7 @@ MAX_DAX_ROWS=1000
 - [ ] Token refresh handled silently
 - [ ] End-to-end test with real ScriptsHub Power BI workspace
 
-### Phase 3 — Azure + Teams (Post-VibeCon)
+### Phase 3 — Azure + Teams
 - [ ] Azure App Service deployment
 - [ ] Azure Functions for scheduled refresh trigger
 - [ ] Teams webhook integration
